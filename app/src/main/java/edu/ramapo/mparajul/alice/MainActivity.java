@@ -9,14 +9,28 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.graphics.Point;
+import android.graphics.Rect;
 import android.net.Uri;
 import android.provider.MediaStore;
 import android.provider.Settings;
+import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.app.ActivityCompat;
 import android.os.Bundle;
 import android.widget.ImageView;
+
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
+import com.google.firebase.ml.vision.FirebaseVision;
+import com.google.firebase.ml.vision.common.FirebaseVisionImage;
+import com.google.firebase.ml.vision.text.FirebaseVisionText;
+import com.google.firebase.ml.vision.text.FirebaseVisionTextRecognizer;
+import com.google.firebase.ml.vision.text.RecognizedLanguage;
+
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -25,6 +39,8 @@ public class MainActivity extends AppCompatActivity {
     public static final String CAMERA_PREF = "camera_pref";
     static final int REQUEST_IMAGE_CAPTURE = 1;
     public ImageView mImageView;
+
+    private Bitmap capturedImage;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -176,9 +192,75 @@ public class MainActivity extends AppCompatActivity {
         if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK)
         {
             Bundle extras = data.getExtras();
-            Bitmap imageBitmap = (Bitmap) extras.get("data");
+            capturedImage = (Bitmap) extras.get("data");
 
-            mImageView.setImageBitmap(imageBitmap);
+//            processImage();
+
+            mImageView.setImageBitmap(capturedImage);
         }
     }
+
+//    public void processImage()
+//    {
+//        // create a FirebaseVisionImage object from a Bitmap object
+//        FirebaseVisionImage image = FirebaseVisionImage.fromBitmap(capturedImage);
+//
+//        FirebaseVisionTextRecognizer detector =
+//                FirebaseVision.getInstance().getOnDeviceTextRecognizer();
+//
+//        // processing the image using ML Kit
+//        Task<FirebaseVisionText> result =
+//                detector.processImage(image)
+//                        .addOnSuccessListener(new OnSuccessListener<FirebaseVisionText>() {
+//                            @Override
+//                            public void onSuccess(FirebaseVisionText firebaseVisionText) {
+//                                // Task completed successfully
+//                                // ...
+//                                processTextBlock(firebaseVisionText);
+//                            }
+//                        })
+//                        .addOnFailureListener(
+//                                new OnFailureListener() {
+//                                    @Override
+//                                    public void onFailure(@NonNull Exception e) {
+//                                        // Task failed with an exception
+//                                        // ...
+//                                    }
+//                                });
+//
+//
+//    }
+//
+//    public void processTextBlock(FirebaseVisionText result)
+//    {
+//        String resultText = result.getText();
+//
+//        System.out.println(resultText);
+//
+//        for (FirebaseVisionText.TextBlock block: result.getTextBlocks()) {
+//            String blockText = block.getText();
+//
+//            System.out.println(blockText);
+////            Float blockConfidence = block.getConfidence();
+////            List<RecognizedLanguage> blockLanguages = block.getRecognizedLanguages();
+////            Point[] blockCornerPoints = block.getCornerPoints();
+////            Rect blockFrame = block.getBoundingBox();
+//            for (FirebaseVisionText.Line line: block.getLines()) {
+//                String lineText = line.getText();
+//                System.out.println(lineText);
+////                Float lineConfidence = line.getConfidence();
+////                List<RecognizedLanguage> lineLanguages = line.getRecognizedLanguages();
+////                Point[] lineCornerPoints = line.getCornerPoints();
+////                Rect lineFrame = line.getBoundingBox();
+//                for (FirebaseVisionText.Element element: line.getElements()) {
+//                    String elementText = element.getText();
+//                    System.out.println(elementText);
+////                    Float elementConfidence = element.getConfidence();
+////                    List<RecognizedLanguage> elementLanguages = element.getRecognizedLanguages();
+////                    Point[] elementCornerPoints = element.getCornerPoints();
+////                    Rect elementFrame = element.getBoundingBox();
+//                }
+//            }
+//        }
+//    }
 }

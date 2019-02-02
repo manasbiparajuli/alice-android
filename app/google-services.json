@@ -1,0 +1,42 @@
+{
+  "project_info": {
+    "project_number": "555360960442",
+    "firebase_url": "https://alice-3064.firebaseio.com",
+    "project_id": "alice-3064",
+    "storage_bucket": "alice-3064.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:555360960442:android:78a759624d39d7fd",
+        "android_client_info": {
+          "package_name": "edu.ramapo.mparajul.alice"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "555360960442-rravufpl356tf2ns6o6gn1qg1d3u9s5d.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDzh3UcE2j5yRgTrFoovRXN7YIeuUuyOAc"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 1,
+          "other_platform_oauth_client": []
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
