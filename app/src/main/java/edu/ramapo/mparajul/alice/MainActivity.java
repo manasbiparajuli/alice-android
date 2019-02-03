@@ -9,20 +9,25 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
-import android.graphics.Point;
-import android.graphics.Rect;
+import android.media.AudioManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.provider.Settings;
+import android.speech.tts.TextToSpeech;
 import android.support.annotation.NonNull;
 import android.support.v4.content.FileProvider;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.app.ActivityCompat;
 import android.os.Bundle;
-import android.widget.ImageView;
+import android.text.method.ScrollingMovementMethod;
+import android.util.Log;
+import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
@@ -31,13 +36,13 @@ import com.google.firebase.ml.vision.FirebaseVision;
 import com.google.firebase.ml.vision.common.FirebaseVisionImage;
 import com.google.firebase.ml.vision.text.FirebaseVisionText;
 import com.google.firebase.ml.vision.text.FirebaseVisionTextRecognizer;
-import com.google.firebase.ml.vision.text.RecognizedLanguage;
 
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -47,17 +52,15 @@ public class MainActivity extends AppCompatActivity {
 
     static final int REQUEST_TAKE_PHOTO = 1;
 
-    public ImageView mImageView;
     String mCurrentPhotoPath;
+
+    TextToSpeech textToSpeech;
     Context context;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        mImageView = findViewById(R.id.captured_photo);
-
         context = getBaseContext();
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
@@ -80,6 +83,30 @@ public class MainActivity extends AppCompatActivity {
             dispatchTakePictureIntent();
         }
     }
+
+    public void initializeAndroidTextToSpeech(final String text)
+    {
+        textToSpeech = new TextToSpeech(getApplicationContext(), new TextToSpeech.OnInitListener() {
+            @Override
+            public void onInit(int status)
+            {
+                if (status == TextToSpeech.SUCCESS) {
+                    int result = textToSpeech.setLanguage(Locale.US);
+
+                    if (result == TextToSpeech.LANG_MISSING_DATA ||
+                            result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                        Toast.makeText(getApplicationContext(), "This language is not supported!", Toast.LENGTH_SHORT);
+                    }
+                    else {
+                        Log.v("TTS", "onInit succeeded");
+                        speakProcessedText(text);
+                    }
+                }
+            }
+        });
+        setVolumeControlStream(AudioManager.STREAM_MUSIC);
+    }
+
     public static void saveToPreferences(Context context, String key, Boolean allowed) {
         SharedPreferences myPrefs = context.getSharedPreferences(CAMERA_PREF, Context.MODE_PRIVATE);
         SharedPreferences.Editor prefsEditor = myPrefs.edit();
@@ -220,12 +247,7 @@ public class MainActivity extends AppCompatActivity {
                 Bitmap bitmap = MediaStore.Images.Media.getBitmap(context.getContentResolver(),
                                                 Uri.fromFile(file));
                 if (bitmap != null) {
-
-                    //TODO:delte these lines
-                    TextView textView = findViewById(R.id.processed_image_text);
-                    textView.setText("Hello, it's me");
-
-                    //                    processImage(bitmap);
+                    processImage(bitmap);
                 }
             }
         } catch (Exception error) {
@@ -281,37 +303,74 @@ public class MainActivity extends AppCompatActivity {
 
     public void processTextBlock(FirebaseVisionText result)
     {
-        String resultText = result.getText();
+        final String resultText = result.getText();
 
         TextView textView = findViewById(R.id.processed_image_text);
+        textView.setMovementMethod(new ScrollingMovementMethod());
         textView.setText(resultText);
-
         System.out.println(resultText);
+
+
+        Button speakButton = findViewById(R.id.speak_text_button);
+
+        speakButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v)
+            {
+                initializeAndroidTextToSpeech(resultText);
+            }
+        });
 
 //        for (FirebaseVisionText.TextBlock block: result.getTextBlocks()) {
 //            String blockText = block.getText();
 //
 //            System.out.println(blockText);
-////            Float blockConfidence = block.getConfidence();
-////            List<RecognizedLanguage> blockLanguages = block.getRecognizedLanguages();
-////            Point[] blockCornerPoints = block.getCornerPoints();
-////            Rect blockFrame = block.getBoundingBox();
 //            for (FirebaseVisionText.Line line: block.getLines()) {
 //                String lineText = line.getText();
 //                System.out.println(lineText);
-////                Float lineConfidence = line.getConfidence();
-////                List<RecognizedLanguage> lineLanguages = line.getRecognizedLanguages();
-////                Point[] lineCornerPoints = line.getCornerPoints();
-////                Rect lineFrame = line.getBoundingBox();
 //                for (FirebaseVisionText.Element element: line.getElements()) {
 //                    String elementText = element.getText();
 //                    System.out.println(elementText);
-////                    Float elementConfidence = element.getConfidence();
-////                    List<RecognizedLanguage> elementLanguages = element.getRecognizedLanguages();
-////                    Point[] elementCornerPoints = element.getCornerPoints();
-////                    Rect elementFrame = element.getBoundingBox();
 //                }
 //            }
 //        }
+    }
+
+    public void speakProcessedText(final String text)
+    {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            Bundle bundle = new Bundle();
+            bundle.putInt(TextToSpeech.Engine.KEY_PARAM_STREAM, AudioManager.STREAM_MUSIC);
+            textToSpeech.speak(text, TextToSpeech.QUEUE_FLUSH, bundle, null);
+        }
+        else {
+
+            HashMap<String, String> param = new HashMap<>();
+            param.put(TextToSpeech.Engine.KEY_PARAM_STREAM,
+                    String.valueOf(AudioManager.STREAM_MUSIC));
+            textToSpeech.speak(text, TextToSpeech.QUEUE_FLUSH, param);
+        }
+    }
+
+    @Override
+    public void onPause()
+    {
+        super.onPause();
+
+        if (textToSpeech != null)
+        {
+            textToSpeech.stop();
+            textToSpeech.shutdown();
+        }
+    }
+
+    @Override
+    protected void onDestroy(){
+        super.onDestroy();
+
+        if (textToSpeech != null) {
+            textToSpeech.stop();
+            textToSpeech.shutdown();
+        }
     }
 }

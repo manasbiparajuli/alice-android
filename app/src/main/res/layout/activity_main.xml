@@ -7,18 +7,21 @@
     android:layout_height="match_parent"
     tools:context="edu.ramapo.mparajul.alice.MainActivity">
 
-    <ImageView
-        android:id="@+id/captured_photo"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"/>
+        <TextView
+            android:id="@+id/processed_image_text"
+            android:layout_width="match_parent"
+            android:layout_height="500dp"
+            android:scrollbars="vertical"
+            android:textSize="45sp"
+            android:gravity="center_horizontal"/>
 
-    <TextView
-        android:id="@+id/processed_image_text"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:scrollbarAlwaysDrawVerticalTrack="true"
-        android:scrollbars="vertical"
-        android:textSize="45sp"
-        android:gravity="center_horizontal"/>
+        <Button
+            android:id="@+id/speak_text_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="20sp"
+            android:gravity="center_horizontal"
+            android:layout_below="@id/processed_image_text"
+            android:text="@string/speak_text"/>
 
 </RelativeLayout>
