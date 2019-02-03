@@ -22,6 +22,7 @@ import android.support.v4.content.ContextCompat;
 import android.support.v4.app.ActivityCompat;
 import android.os.Bundle;
 import android.widget.ImageView;
+import android.widget.TextView;
 
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
@@ -219,9 +220,12 @@ public class MainActivity extends AppCompatActivity {
                 Bitmap bitmap = MediaStore.Images.Media.getBitmap(context.getContentResolver(),
                                                 Uri.fromFile(file));
                 if (bitmap != null) {
-                    mImageView.setImageBitmap(bitmap);
 
-//                    processImage(bitmap);
+                    //TODO:delte these lines
+                    TextView textView = findViewById(R.id.processed_image_text);
+                    textView.setText("Hello, it's me");
+
+                    //                    processImage(bitmap);
                 }
             }
         } catch (Exception error) {
@@ -278,6 +282,9 @@ public class MainActivity extends AppCompatActivity {
     public void processTextBlock(FirebaseVisionText result)
     {
         String resultText = result.getText();
+
+        TextView textView = findViewById(R.id.processed_image_text);
+        textView.setText(resultText);
 
         System.out.println(resultText);
 
