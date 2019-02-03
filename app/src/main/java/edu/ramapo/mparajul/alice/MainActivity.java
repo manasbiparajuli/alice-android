@@ -12,9 +12,11 @@ import android.graphics.Bitmap;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.net.Uri;
+import android.os.Environment;
 import android.provider.MediaStore;
 import android.provider.Settings;
 import android.support.annotation.NonNull;
+import android.support.v4.content.FileProvider;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.app.ActivityCompat;
@@ -30,6 +32,10 @@ import com.google.firebase.ml.vision.text.FirebaseVisionText;
 import com.google.firebase.ml.vision.text.FirebaseVisionTextRecognizer;
 import com.google.firebase.ml.vision.text.RecognizedLanguage;
 
+import java.io.File;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
@@ -37,10 +43,12 @@ public class MainActivity extends AppCompatActivity {
     public static final int MY_PERMISSIONS_REQUEST_CAMERA = 100;
     public static final String ALLOW_KEY = "ALLOWED";
     public static final String CAMERA_PREF = "camera_pref";
-    static final int REQUEST_IMAGE_CAPTURE = 1;
-    public ImageView mImageView;
 
-    private Bitmap capturedImage;
+    static final int REQUEST_TAKE_PHOTO = 1;
+
+    public ImageView mImageView;
+    String mCurrentPhotoPath;
+    Context context;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,6 +56,8 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         mImageView = findViewById(R.id.captured_photo);
+
+        context = getBaseContext();
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             if (getFromPref(this, ALLOW_KEY)) {
@@ -180,63 +190,97 @@ public class MainActivity extends AppCompatActivity {
 
     private void dispatchTakePictureIntent() {
         Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-
-        if (takePictureIntent.resolveActivity(getPackageManager()) != null){
-            startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
+        // Ensure that there's a camera activity to handle the intent
+        if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
+            // Create the File where the photo should go
+            File photoFile = null;
+            try {
+                photoFile = createImageFile();
+            } catch (IOException ex) {
+                // Error occurred while creating the File
+            }
+            // Continue only if the File was successfully created
+            if (photoFile != null) {
+                Uri photoURI = FileProvider.getUriForFile(this,
+                        "edu.ramapo.mparajul.fileprovider",
+                        photoFile);
+                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI);
+                startActivityForResult(takePictureIntent, REQUEST_TAKE_PHOTO);
+            }
         }
     }
 
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+    protected void onActivityResult(int requestCode, int resultCode, Intent intent) {
+        super.onActivityResult(requestCode, resultCode, intent);
+        try {
+            if (resultCode == RESULT_OK && requestCode == REQUEST_TAKE_PHOTO) {
+                File file = new File(mCurrentPhotoPath);
+                Bitmap bitmap = MediaStore.Images.Media.getBitmap(context.getContentResolver(),
+                                                Uri.fromFile(file));
+                if (bitmap != null) {
+                    mImageView.setImageBitmap(bitmap);
 
-        if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK)
-        {
-            Bundle extras = data.getExtras();
-            capturedImage = (Bitmap) extras.get("data");
-
-//            processImage();
-
-            mImageView.setImageBitmap(capturedImage);
+//                    processImage(bitmap);
+                }
+            }
+        } catch (Exception error) {
+            error.printStackTrace();
         }
     }
 
-//    public void processImage()
-//    {
-//        // create a FirebaseVisionImage object from a Bitmap object
-//        FirebaseVisionImage image = FirebaseVisionImage.fromBitmap(capturedImage);
-//
-//        FirebaseVisionTextRecognizer detector =
-//                FirebaseVision.getInstance().getOnDeviceTextRecognizer();
-//
-//        // processing the image using ML Kit
-//        Task<FirebaseVisionText> result =
-//                detector.processImage(image)
-//                        .addOnSuccessListener(new OnSuccessListener<FirebaseVisionText>() {
-//                            @Override
-//                            public void onSuccess(FirebaseVisionText firebaseVisionText) {
-//                                // Task completed successfully
-//                                // ...
-//                                processTextBlock(firebaseVisionText);
-//                            }
-//                        })
-//                        .addOnFailureListener(
-//                                new OnFailureListener() {
-//                                    @Override
-//                                    public void onFailure(@NonNull Exception e) {
-//                                        // Task failed with an exception
-//                                        // ...
-//                                    }
-//                                });
-//
-//
-//    }
-//
-//    public void processTextBlock(FirebaseVisionText result)
-//    {
-//        String resultText = result.getText();
-//
-//        System.out.println(resultText);
-//
+    private File createImageFile() throws IOException
+    {
+        // Create an image file name
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+        String imageFileName = "JPEG_" + timeStamp + "_";
+        File storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+        File image = File.createTempFile(
+                imageFileName,  /* prefix */
+                ".jpg",         /* suffix */
+                storageDir      /* directory */
+        );
+
+        // Save a file: path for use with ACTION_VIEW intents
+        mCurrentPhotoPath = image.getAbsolutePath();
+        return image;
+    }
+
+    public void processImage(Bitmap capturedImage)
+    {
+        // create a FirebaseVisionImage object from a Bitmap object
+        FirebaseVisionImage image = FirebaseVisionImage.fromBitmap(capturedImage);
+
+        FirebaseVisionTextRecognizer detector =
+                FirebaseVision.getInstance().getOnDeviceTextRecognizer();
+
+        // processing the image using ML Kit
+        Task<FirebaseVisionText> result =
+                detector.processImage(image)
+                        .addOnSuccessListener(new OnSuccessListener<FirebaseVisionText>() {
+                            @Override
+                            public void onSuccess(FirebaseVisionText firebaseVisionText) {
+                                // Task completed successfully
+                                // ...
+                                processTextBlock(firebaseVisionText);
+                            }
+                        })
+                        .addOnFailureListener(
+                                new OnFailureListener() {
+                                    @Override
+                                    public void onFailure(@NonNull Exception e) {
+                                        // Task failed with an exception
+                                        // ...
+                                    }
+                                });
+    }
+
+    public void processTextBlock(FirebaseVisionText result)
+    {
+        String resultText = result.getText();
+
+        System.out.println(resultText);
+
 //        for (FirebaseVisionText.TextBlock block: result.getTextBlocks()) {
 //            String blockText = block.getText();
 //
@@ -262,5 +306,5 @@ public class MainActivity extends AppCompatActivity {
 //                }
 //            }
 //        }
-//    }
+    }
 }
